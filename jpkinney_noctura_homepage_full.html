@@ -1,0 +1,494 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.site {
+  font-family: 'Montserrat', sans-serif;
+  background: #0a0a0a;
+  color: #e0d8cc;
+  overflow-x: hidden;
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 52px;
+  background: linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%);
+}
+.nav-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: #e0d8cc;
+  line-height: 1;
+}
+.nav-studio {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #6b6258;
+}
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links li {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7a7068;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.nav-links li:hover { color: #e0d8cc; }
+
+/* HERO */
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 600px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.hero-bg {
+  position: absolute;
+  inset: -80px 0;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+.hero-img-frame {
+  width: 55%;
+  height: 72%;
+  border: 0.5px solid #252018;
+  position: relative;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+.hero-img-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 55% 38%, rgba(160,100,40,0.14) 0%, transparent 60%);
+}
+.hero-img-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 70%, rgba(60,40,80,0.12) 0%, transparent 55%);
+}
+.hero-img-label {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #3a3530;
+}
+.hero-placeholder-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.hero-placeholder-text span {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #2e2a26;
+}
+.hero-placeholder-text .ph-line {
+  width: 40px;
+  height: 0.5px;
+  background: #252018;
+}
+
+.hero-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.3) 38%, transparent 60%),
+    linear-gradient(to right, rgba(10,10,10,0.5) 0%, transparent 40%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 0 52px 56px;
+  width: 100%;
+}
+.hero-eyebrow {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #5a5248;
+  margin-bottom: 12px;
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 86px;
+  font-weight: 300;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: #e0d8cc;
+  margin-bottom: 6px;
+}
+.hero-title em {
+  font-style: italic;
+  color: #b8aa98;
+}
+.hero-tagline {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5a5248;
+  margin-bottom: 32px;
+}
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b8aa98;
+  cursor: pointer;
+  border-bottom: 0.5px solid #3a3530;
+  padding-bottom: 5px;
+  transition: color 0.3s, border-color 0.3s;
+}
+.hero-cta:hover { color: #e0d8cc; border-color: #6a6258; }
+
+.scroll-indicator {
+  position: absolute;
+  right: 52px;
+  bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 3;
+}
+.scroll-indicator .si-line {
+  width: 0.5px;
+  height: 52px;
+  background: linear-gradient(to bottom, transparent, #3a3530);
+}
+.scroll-indicator .si-text {
+  font-size: 7px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #3a3530;
+  writing-mode: vertical-rl;
+}
+
+/* WORK GRID SECTION */
+.section-work {
+  background: #0a0a0a;
+  padding: 100px 52px;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 52px;
+  border-bottom: 0.5px solid #1a1814;
+  padding-bottom: 20px;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 38px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: #c8bfb0;
+}
+.section-link {
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5a5248;
+  cursor: pointer;
+  border-bottom: 0.5px solid #2a2520;
+  padding-bottom: 3px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+.grid-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: #111;
+}
+.grid-item.tall { grid-row: span 2; }
+
+.grid-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #111;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.grid-item.tall .grid-thumb { aspect-ratio: unset; height: 100%; }
+.grid-item:hover .grid-thumb { transform: scale(1.03); }
+
+.grid-thumb-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.grid-thumb-inner span {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #2a2520;
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10,10,10,0);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  transition: background 0.4s;
+}
+.grid-item:hover .grid-overlay { background: rgba(10,10,10,0.65); }
+.grid-meta {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s, transform 0.35s;
+}
+.grid-item:hover .grid-meta { opacity: 1; transform: translateY(0); }
+.grid-meta-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  color: #e0d8cc;
+  margin-bottom: 4px;
+}
+.grid-meta-sub {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8a8078;
+}
+
+/* COLOR SWATCHES for grid placeholders */
+.g1 { background: linear-gradient(135deg, #1a1410 0%, #251e18 100%); }
+.g2 { background: linear-gradient(135deg, #0d1018 0%, #131820 100%); }
+.g3 { background: linear-gradient(135deg, #160e0e 0%, #1e1212 100%); }
+.g4 { background: linear-gradient(135deg, #0e1210 0%, #121a14 100%); }
+.g5 { background: linear-gradient(135deg, #14101a 0%, #1c1422 100%); }
+
+/* FOOTER */
+.footer {
+  border-top: 0.5px solid #141210;
+  padding: 32px 52px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.footer-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: #5a5248;
+}
+.footer-studio {
+  font-size: 7px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #2e2a26;
+}
+.footer-right {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #3a3530;
+}
+</style>
+
+<div class="site">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="nav-name">J.P. Kinney</div>
+      <div class="nav-studio">Noctura Studios</div>
+    </div>
+    <ul class="nav-links">
+      <li>Paintings</li>
+      <li>Drawings</li>
+      <li>Graphic Design</li>
+      <li>Game Design</li>
+      <li>Contact</li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero" id="hero">
+    <div class="hero-bg" id="hero-bg">
+      <div class="hero-img-frame">
+        <div class="hero-placeholder-text">
+          <span>Your hero artwork</span>
+          <div class="ph-line"></div>
+          <span>Full bleed · no border</span>
+        </div>
+        <div class="hero-img-label">Title · Medium · Year</div>
+      </div>
+    </div>
+
+    <div class="hero-vignette"></div>
+
+    <div class="scroll-indicator">
+      <div class="si-text">Scroll</div>
+      <div class="si-line"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-eyebrow">Noctura Studios</div>
+      <h1 class="hero-title">J.P.<br><em>Kinney</em></h1>
+      <p class="hero-tagline">Artist &nbsp;·&nbsp; Graphic Designer &nbsp;·&nbsp; Lehigh University</p>
+      <span class="hero-cta">Explore work &nbsp;→</span>
+    </div>
+  </div>
+
+  <!-- WORK GRID -->
+  <section class="section-work">
+    <div class="section-header">
+      <div class="section-title">Recent Work</div>
+      <span class="section-link">View all →</span>
+    </div>
+
+    <div class="grid">
+      <!-- tall left piece -->
+      <div class="grid-item tall">
+        <div class="grid-thumb g1" style="height:100%;aspect-ratio:unset;">
+          <div class="grid-thumb-inner"><span>Painting</span></div>
+        </div>
+        <div class="grid-overlay">
+          <div class="grid-meta">
+            <div class="grid-meta-title">Untitled I</div>
+            <div class="grid-meta-sub">Oil on Canvas · 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- top right two -->
+      <div class="grid-item">
+        <div class="grid-thumb g2">
+          <div class="grid-thumb-inner"><span>Graphic Design</span></div>
+        </div>
+        <div class="grid-overlay">
+          <div class="grid-meta">
+            <div class="grid-meta-title">Untitled II</div>
+            <div class="grid-meta-sub">Digital · 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-item">
+        <div class="grid-thumb g3">
+          <div class="grid-thumb-inner"><span>Drawing</span></div>
+        </div>
+        <div class="grid-overlay">
+          <div class="grid-meta">
+            <div class="grid-meta-title">Untitled III</div>
+            <div class="grid-meta-sub">Charcoal · 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- bottom right two -->
+      <div class="grid-item">
+        <div class="grid-thumb g4">
+          <div class="grid-thumb-inner"><span>Game Design</span></div>
+        </div>
+        <div class="grid-overlay">
+          <div class="grid-meta">
+            <div class="grid-meta-title">Untitled IV</div>
+            <div class="grid-meta-sub">Game Art · 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-item">
+        <div class="grid-thumb g5">
+          <div class="grid-thumb-inner"><span>Painting</span></div>
+        </div>
+        <div class="grid-overlay">
+          <div class="grid-meta">
+            <div class="grid-meta-title">Untitled V</div>
+            <div class="grid-meta-sub">Oil on Canvas · 2025</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-left">
+      <div class="footer-name">J.P. Kinney</div>
+      <div class="footer-studio">Noctura Studios · © 2025</div>
+    </div>
+    <div class="footer-right">johnpalmerkinney@gmail.com</div>
+  </footer>
+
+</div>
+
+<script>
+  const heroBg = document.getElementById('hero-bg');
+  const hero = document.getElementById('hero');
+  let ticking = false;
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        const heroH = hero.offsetHeight;
+        if (scrollY < heroH) {
+          const offset = scrollY * 0.35;
+          heroBg.style.transform = `translateY(${offset}px)`;
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+</script>

@@ -60,6 +60,7 @@
 /* STAR PANEL */
 .star-panel {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100vh;
   overflow: hidden;
@@ -72,6 +73,7 @@
   height: 100%;
   border: none;
   display: block;
+  pointer-events: auto;
 }
 .star-panel-scroll-hint {
   position: absolute;
@@ -418,6 +420,8 @@
       src="star-web-panel/star-web-panel-c914683b00cd7a4ef92a75fadc4a767dc8af8c55/index.html"
       title="Starry Eye Catcher"
       scrolling="no"
+      allow="autoplay; fullscreen"
+      tabindex="0"
       allowfullscreen
     ></iframe>
     <div class="star-panel-scroll-hint">

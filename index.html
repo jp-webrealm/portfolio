@@ -73,13 +73,6 @@
   border: none;
   display: block;
 }
-.star-panel-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  cursor: default;
-  pointer-events: none; /* allow clicks to reach the Godot iframe */
-}
 .star-panel-scroll-hint {
   position: absolute;
   bottom: 36px;
@@ -422,13 +415,11 @@
   <!-- STAR PANEL -->
   <section class="star-panel" id="star-panel">
     <iframe
-      id="star-panel-iframe"
       src="star-web-panel/star-web-panel-c914683b00cd7a4ef92a75fadc4a767dc8af8c55/index.html"
       title="Starry Eye Catcher"
       scrolling="no"
       allowfullscreen
     ></iframe>
-    <div class="star-panel-overlay" id="star-panel-overlay"></div>
     <div class="star-panel-scroll-hint">
       <span>Scroll</span>
       <svg viewBox="0 0 16 16"><polyline points="2,5 8,11 14,5"/></svg>
@@ -546,24 +537,6 @@
   </footer>
 
 </div>
-
-<script>
-  const starPanel = document.getElementById('star-panel');
-  const starPanelIframe = document.getElementById('star-panel-iframe');
-
-  // When the pointer is over the iframe, prevent the wheel from being "stuck"
-  // inside the embedded Godot content, and instead scroll the outer page.
-  window.addEventListener('wheel', function (e) {
-    if (!starPanel || !starPanelIframe) return;
-
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const isOverStarPanel = !!el && (el === starPanelIframe || starPanel.contains(el));
-    if (!isOverStarPanel) return;
-
-    e.preventDefault();
-    window.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: 'auto' });
-  }, { passive: false, capture: true });
-</script>
 
 <script>
   const heroBg = document.getElementById('hero-bg');

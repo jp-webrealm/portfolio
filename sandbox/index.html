@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom Cursor Demo</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Hidden canvas-drawn cursor image is swapped in via JS */
+    #cursor-square {
+      position: fixed;
+      width: 5px;
+      height: 5px;
+      background: #fff;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.1s ease;
+      z-index: 9999;
+    }
+
+    .hover-zone {
+      cursor: none;
+      width: 320px;
+      height: 180px;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .hover-zone p {
+      color: #555;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      transition: color 0.2s ease;
+    }
+
+    .hover-zone:hover p {
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cursor-square"></div>
+
+  <div class="hover-zone" id="zone">
+    <p>hover here</p>
+  </div>
+
+  <script>
+    const zone   = document.getElementById('zone');
+    const cursor = document.getElementById('cursor-square');
+
+    zone.addEventListener('mouseenter', () => {
+      cursor.style.opacity = '1';
+    });
+
+    zone.addEventListener('mouseleave', () => {
+      cursor.style.opacity = '0';
+    });
+
+    zone.addEventListener('mousemove', (e) => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top  = e.clientY + 'px';
+    });
+  </script>
+
+</body>
+</html>

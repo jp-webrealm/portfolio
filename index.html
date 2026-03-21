@@ -65,6 +65,19 @@
   overflow: hidden;
   display: flex;
   align-items: flex-end;
+  cursor: none;
+}
+
+#hero-cursor {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  background: #fff;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 9999;
 }
 .hero-bg {
   position: absolute;
@@ -344,6 +357,8 @@
 }
 </style>
 
+<div id="hero-cursor"></div>
+
 <div class="site">
 
   <!-- NAV -->
@@ -474,6 +489,22 @@
 </div>
 
 <script>
+  const heroCursor = document.getElementById('hero-cursor');
+  const heroZone   = document.getElementById('hero');
+
+  heroZone.addEventListener('mouseenter', () => {
+    heroCursor.style.opacity = '1';
+  });
+  heroZone.addEventListener('mouseleave', () => {
+    heroCursor.style.opacity = '0';
+  });
+  heroZone.addEventListener('mousemove', (e) => {
+    heroCursor.style.left = e.clientX + 'px';
+    heroCursor.style.top  = e.clientY + 'px';
+  });
+</script>
+
+<script>
   const heroBg = document.getElementById('hero-bg');
   const hero = document.getElementById('hero');
   let ticking = false;
@@ -492,4 +523,26 @@
       ticking = true;
     }
   });
+</script>
+<script>
+  // Forward wheel scrolling to the parent page when the cursor is over an iframe.
+  // This helps when the embedded iframe captures wheel events and prevents page scrolling.
+  (() => {
+    const getOverIframe = (x, y) => {
+      const el = document.elementFromPoint(x, y);
+      return el && el.closest ? el.closest('iframe') : null;
+    };
+
+    window.addEventListener(
+      'wheel',
+      (e) => {
+        const iframe = getOverIframe(e.clientX, e.clientY);
+        if (!iframe) return;
+
+        window.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+        e.preventDefault();
+      },
+      { capture: true, passive: false }
+    );
+  })();
 </script>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jp's webrealm</title>
+  <style>
+    /* ── reset ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html   { height: 100%; overflow: hidden; scroll-behavior: smooth; }
+    body   { min-height: 100%; background: #000; }
+
+    /* canvas sits fixed on top during intro */
+    canvas {
+      position: fixed;
+      top: 0; left: 0;
+      display: block;
+      z-index: 100;
+    }
+
+    /* white flash overlay for the click→site transition */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      z-index: 90;
+      pointer-events: none;
+    }
+
+    /* ══ MAIN SITE ═══════════════════════════════════════════ */
+    #site { display: none; }
+
+    section {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* subtle breathing radial glow on each section */
+    section::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 40%,
+        rgba(255,255,255,0.07) 0%, transparent 68%);
+      animation: section-breathe 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    section[data-s="0"] { background: #000000; }
+    section[data-s="0"]::after { animation-delay:  0.0s; }
+
+    section[data-s="1"] { background: #1c0404; }
+    section[data-s="1"]::after { animation-delay: -2.3s; }
+
+    section[data-s="2"] { background: #081409; }
+    section[data-s="2"]::after { animation-delay: -4.6s; }
+
+    section[data-s="3"] { background: #050a18; }
+    section[data-s="3"]::after { animation-delay: -1.5s; }
+
+    @keyframes section-breathe {
+      0%, 100% { opacity: 0.35; }
+      50%       { opacity: 1.00; }
+    }
+
+    /* ══ CUSTOM CURSOR ═══════════════════════════════════════ */
+    #cur {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      will-change: transform;
+    }
+
+    /* inner anchor: centers cursor shape on the tip point */
+    #cur-shape {
+      position: absolute;
+      top: 0; left: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ── section 0 cursor: tiny white diamond ── */
+    .cur-s0 {
+      width: 6px; height: 6px;
+      background: #fff;
+      animation: diamond-drift 3s ease-in-out infinite alternate;
+    }
+
+    /* ── section 1 cursor: normal white diamond ── */
+    .cur-s1 {
+      width: 12px; height: 12px;
+      background: #fff;
+      animation: diamond-drift 3s ease-in-out infinite alternate;
+      animation-delay: -1.5s;
+    }
+
+    @keyframes diamond-drift {
+      0%   { transform: rotate(40deg); }
+      100% { transform: rotate(50deg); }
+    }
+
+    /* ── section 2 cursor: lavender flower SVG ── */
+    .cur-s2 {
+      display: block;
+      animation: flower-drift 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes flower-drift {
+      0%   { transform: rotate(-10deg) scale(0.88); }
+      100% { transform: rotate( 10deg) scale(1.12); }
+    }
+
+    /* ── section 3 cursor: small white circle ── */
+    .cur-s3 {
+      width: 8px; height: 8px;
+      background: #fff;
+      border-radius: 50%;
+      animation: circle-pulse 2.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes circle-pulse {
+      0%   { transform: scale(0.80); }
+      100% { transform: scale(1.20); }
+    }
+
+    /* hide native cursor everywhere once site is active */
+    body.site-active { cursor: none; overflow-y: auto; }
+  </style>
+</head>
+<body>
+
+  <!-- intro canvas (fixed, z-index 100) -->
+  <canvas id="c"></canvas>
+
+  <!-- white flash overlay for click→site transition -->
+  <div id="overlay"></div>
+
+  <!-- main site: 4 full-viewport sections -->
+  <div id="site">
+    <section data-s="0"></section>
+    <section data-s="1"></section>
+    <section data-s="2"></section>
+    <section data-s="3"></section>
+  </div>
+
+  <!-- custom cursor (shown only after site reveal) -->
+  <div id="cur"><div id="cur-shape"></div></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const canvas = document.getElementById('c');
+    const ctx    = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* ─────────────────────────────────────────────────────
+       MATH HELPERS
+    ───────────────────────────────────────────────────── */
+    const clamp   = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const lerp    = (a, b, t)   => a + (b - a) * t;
+    const norm    = (v, a, b)   => clamp((v - a) / (b - a), 0, 1);
+    const easeIn  = t => t * t * t;
+    const easeOut = t => 1 - (1 - t) ** 3;
+    const easeIO  = t => t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+
+    /* ─────────────────────────────────────────────────────
+       TRACKED TEXT  (manual letter-spacing, canvas-safe)
+    ───────────────────────────────────────────────────── */
+    function fillTextTracked(str, cx, y, spacing) {
+      const chars  = str.split('');
+      const widths = chars.map(ch => ctx.measureText(ch).width);
+      const total  = widths.reduce((s, w) => s + w, 0) + spacing * (chars.length - 1);
+      ctx.textAlign = 'left';
+      let x = cx - total / 2;
+      chars.forEach((ch, i) => {
+        ctx.fillText(ch, x, y);
+        x += widths[i] + spacing;
+      });
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE STATE MACHINE
+    ───────────────────────────────────────────────────── */
+    const P = {
+      DRIP: 0, IMPACT: 1, SHRINK: 2, BREATHE: 3, FILL: 4,
+      TEXT: 5, WAIT_CLICK: 6, RIPPLE: 7, DONE: 8,
+    };
+
+    const DURATIONS = [
+      3000,      // 0 DRIP       – blob falls from top
+      1200,      // 1 IMPACT     – squish + ripples + expand
+       900,      // 2 SHRINK     – contracts to center, becomes square
+      2000,      // 3 BREATHE    – subtle pulse
+       600,      // 4 FILL       – square fills screen
+      3500,      // 5 TEXT       – text fades in & bg transitions to black
+      Infinity,  // 6 WAIT_CLICK – waits for user click (never auto-advances)
+       700,      // 7 RIPPLE     – white circle expands from click point
+    ];
+
+    let phase   = P.DRIP;
+    let t0      = null;
+    let ripples = [];
+
+    // Click-transition state
+    let clickX = 0, clickY = 0;
+    let clickListenerActive = false;
+    let pendingRipple       = false;
+
+    const blobR  = () => Math.min(canvas.width, canvas.height) * 0.065;
+    const phaseT = now => clamp((now - t0) / DURATIONS[phase], 0, 1);
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 0 – DRIP
+    ───────────────────────────────────────────────────── */
+    function drawDrip(now) {
+      const T  = phaseT(now);
+      const W  = canvas.width, H = canvas.height;
+      const cx = W / 2;
+      const r  = blobR();
+      const gY = H - 8;
+
+      ctx.fillStyle = '#fff';
+
+      const fallT = T < 0.18 ? 0 : easeIn(norm(T, 0.18, 1.0));
+      const blobY = lerp(-r * 0.3, gY - r, fallT);
+
+      const SNAP = 0.56;
+      if (T < SNAP) {
+        const nt   = norm(T, 0, SNAP);
+        const topW = lerp(r * 0.50, 0.6, easeOut(nt));   // thinner attachment
+        const botW = lerp(1.6, 0.45, easeOut(nt));        // narrows toward blob
+        const topY = -2;
+        const botY = blobY - r * 0.87;
+        const len  = botY - topY;
+
+        if (len > 4) {
+          ctx.beginPath();
+          ctx.moveTo(cx - topW, topY);
+          ctx.bezierCurveTo(
+            cx - topW * 0.72, topY + len * 0.38,
+            cx - botW * 1.1,  botY - len * 0.16,
+            cx - botW, botY
+          );
+          ctx.lineTo(cx + botW, botY);
+          ctx.bezierCurveTo(
+            cx + botW * 1.1,  botY - len * 0.16,
+            cx + topW * 0.72, topY + len * 0.38,
+            cx + topW, topY
+          );
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        const srcR = r * lerp(0.52, 0.07, easeOut(nt));
+        if (srcR > 1) {
+          ctx.beginPath();
+          ctx.arc(cx, topY, srcR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      if (T > SNAP && T < SNAP + 0.17) {
+        const dt = norm(T, SNAP, SNAP + 0.17);
+        const dy = lerp(18, 80, easeIn(dt));
+        const dr = lerp(4.5, 1.2, dt);
+        ctx.beginPath();
+        ctx.arc(cx, dy, dr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Teardrop bezier blob – narrow top, wide belly, rounded base
+      const stretch = 1 + 0.38 * clamp(norm(T, 0.28, 0.88), 0, 1);
+      const rX = r / Math.sqrt(stretch);
+      const rY = r * Math.sqrt(stretch);
+      // Slow lateral jiggle to sell the liquid weight
+      const wob = Math.sin(now * 0.0028) * rX * 0.10;
+
+      ctx.save();
+      ctx.translate(cx, blobY);
+      ctx.beginPath();
+      ctx.moveTo(0, -rY);                                     // top (where neck pulled)
+      ctx.bezierCurveTo( rX * 0.65, -rY * 0.50,              // upper-right control
+                         rX + wob,   rY * 0.18,              // right belly (widest)
+                         rX * 0.55,  rY * 0.88);             // lower-right
+      ctx.bezierCurveTo( rX * 0.28,  rY * 1.06,              // bottom-right round
+                        -rX * 0.28,  rY * 1.06,              // bottom-left round
+                        -rX * 0.55,  rY * 0.88);             // lower-left
+      ctx.bezierCurveTo(-(rX + wob), rY * 0.18,              // left belly (widest)
+                        -rX * 0.65, -rY * 0.50,              // upper-left control
+                         0,         -rY);                     // back to top
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 1 – IMPACT
+    ───────────────────────────────────────────────────── */
+    function drawImpact(now) {
+      const T  = phaseT(now);
+      const W  = canvas.width, H = canvas.height;
+      const cx = W / 2, gY = H - 8;
+      const r  = blobR();
+
+      if (ripples.length === 0) {
+        [0, 105, 225].forEach((delay, i) => {
+          ripples.push({
+            t0:   now + delay,
+            dur:  920 - i * 95,
+            maxR: W * (0.52 - i * 0.11),
+            a0:   0.62 - i * 0.15,
+          });
+        });
+      }
+
+      if (T < 0.12) {
+        const flashA = (1 - T / 0.12) * 0.25;
+        ctx.save();
+        ctx.globalAlpha = flashA;
+        ctx.fillStyle   = '#fff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+
+      for (const rp of ripples) {
+        const rt = clamp((now - rp.t0) / rp.dur, 0, 1);
+        if (rt <= 0 || rt >= 1) continue;
+        const rad = rp.maxR * easeOut(rt);
+        const a   = rp.a0 * (1 - rt);
+        ctx.beginPath();
+        ctx.arc(cx, gY, rad, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+      }
+
+      let sX = 1, sY = 1, drawR = r;
+      if (T < 0.32) {
+        const sq = easeOut(T / 0.32);
+        sX = lerp(1, 3.9, sq); sY = lerp(1, 0.17, sq);
+      } else if (T < 0.65) {
+        const sq = easeOut(1 - norm(T, 0.32, 0.65));
+        sX = lerp(1, 3.9, sq); sY = lerp(1, 0.17, sq);
+      } else {
+        drawR = r * lerp(1, 11, easeIn(norm(T, 0.65, 1.0)));
+      }
+
+      ctx.save();
+      ctx.translate(cx, gY);
+      ctx.scale(sX, sY);
+      ctx.beginPath();
+      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 2 – SHRINK TO SQUARE
+    ───────────────────────────────────────────────────── */
+    function drawShrink(now) {
+      const T  = phaseT(now);
+      const W  = canvas.width, H = canvas.height;
+      const cx = W / 2, cy = H / 2;
+      const r  = blobR(), gY = H - 8;
+
+      const y   = lerp(gY, cy, easeIO(T));
+      // easeIO gives smooth deceleration into the final pinpoint (no hard snap)
+      const rad = Math.max(lerp(r * 11, 2.5, easeIO(T)), 0.8);
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(cx, y, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 3 – BREATHE
+    ───────────────────────────────────────────────────── */
+    function drawBreathe(now) {
+      const T  = phaseT(now);
+      const W  = canvas.width, H = canvas.height;
+      const cx = W / 2, cy = H / 2;
+
+      const sz = 5 * (1 + 0.13 * Math.sin(T * Math.PI * 2 * 3.5));
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx - sz / 2, cy - sz / 2, sz, sz);
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 4 – FILL SCREEN
+    ───────────────────────────────────────────────────── */
+    function drawFill(now) {
+      const T  = phaseT(now);
+      const W  = canvas.width, H = canvas.height;
+      const cx = W / 2, cy = H / 2;
+
+      const maxSz = Math.hypot(W, H) * 1.05;
+      const sz    = lerp(5, maxSz, easeIn(T));
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx - sz / 2, cy - sz / 2, sz, sz);
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 5 – TEXT
+       White bg fades to black while text color inverts so
+       it's always readable. Ends: white text on black.
+    ───────────────────────────────────────────────────── */
+    const INTRO_TEXT = "click to enter jp's webrealm.";
+
+    function drawText(now) {
+      const T = phaseT(now);
+      const W = canvas.width, H = canvas.height;
+
+      // White background stays throughout – no fade to black
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, W, H);
+
+      // Dark text fades in T=0 → T=0.30 then holds
+      const textA = easeOut(norm(T, 0, 0.30));
+      if (textA > 0.005) {
+        const fs = clamp(W * 0.02, 12, 24);
+        ctx.save();
+        ctx.globalAlpha  = textA;
+        ctx.fillStyle    = '#111';
+        ctx.font         = `300 ${fs}px "Courier New", monospace`;
+        ctx.textBaseline = 'middle';
+        fillTextTracked(INTRO_TEXT, W / 2, H / 2, fs * 0.55);
+        ctx.restore();
+      }
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 6 – WAIT_CLICK
+       White text on black, gently pulsing. Click to proceed.
+    ───────────────────────────────────────────────────── */
+    function drawWaitClick(now) {
+      if (!clickListenerActive) {
+        clickListenerActive = true;
+        canvas.style.cursor = 'pointer';
+        canvas.addEventListener('click', onCanvasClick, { once: true });
+      }
+
+      const W  = canvas.width, H = canvas.height;
+      const fs = clamp(W * 0.02, 12, 24);
+
+      // White background (matching TEXT phase)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, W, H);
+
+      // Dark text pulses gently: alpha 0.40 → 1.0
+      const pulse = 0.40 + 0.60 * (0.5 + 0.5 * Math.sin(now / 900));
+
+      ctx.save();
+      ctx.globalAlpha  = pulse;
+      ctx.fillStyle    = '#111';
+      ctx.font         = `300 ${fs}px "Courier New", monospace`;
+      ctx.textBaseline = 'middle';
+      fillTextTracked(INTRO_TEXT, W / 2, H / 2, fs * 0.55);
+      ctx.restore();
+    }
+
+    function onCanvasClick(e) {
+      canvas.style.cursor = 'default';
+      clickListenerActive = false;
+      clickX = e.clientX;
+      clickY = e.clientY;
+      pendingRipple = true; // processed at next rAF frame
+    }
+
+    /* ─────────────────────────────────────────────────────
+       PHASE 7 – RIPPLE
+       White circle expands outward from click point.
+    ───────────────────────────────────────────────────── */
+    function drawRipple(now) {
+      const T = phaseT(now);
+      const W = canvas.width, H = canvas.height;
+
+      // Radius must reach every corner from the click origin
+      const maxR = Math.hypot(
+        Math.max(clickX, W - clickX),
+        Math.max(clickY, H - clickY)
+      ) * 1.05;
+
+      // White base (coming from the white WAIT_CLICK screen)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, W, H);
+
+      // Black portal expands from click – revealing the dark site beneath
+      ctx.beginPath();
+      ctx.arc(clickX, clickY, maxR * easeIn(T), 0, Math.PI * 2);
+      ctx.fillStyle = '#000';
+      ctx.fill();
+    }
+
+    /* ─────────────────────────────────────────────────────
+       SITE REVEAL  (called when RIPPLE completes)
+    ───────────────────────────────────────────────────── */
+    const FLOWER_SVG = `<svg class="cur-s2" viewBox="-12 -12 24 24"
+        width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="0" cy="-5.5" rx="2.5" ry="5" fill="#c8a8e9" transform="rotate(  0)"/>
+      <ellipse cx="0" cy="-5.5" rx="2.5" ry="5" fill="#c8a8e9" transform="rotate( 72)"/>
+      <ellipse cx="0" cy="-5.5" rx="2.5" ry="5" fill="#c8a8e9" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-5.5" rx="2.5" ry="5" fill="#c8a8e9" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-5.5" rx="2.5" ry="5" fill="#c8a8e9" transform="rotate(288)"/>
+      <circle cx="0" cy="0" r="2.2" fill="#e0c8f8"/>
+    </svg>`;
+
+    const CURSOR_HTML = [
+      '<div class="cur-s0"></div>',
+      '<div class="cur-s1"></div>',
+      FLOWER_SVG,
+      '<div class="cur-s3"></div>',
+    ];
+
+    function revealSite() {
+      // Canvas ends with black filling the screen, so the cut is seamless
+      canvas.style.display = 'none';
+      const site = document.getElementById('site');
+      site.style.display = 'block';
+      document.body.classList.add('site-active');
+      document.documentElement.style.overflow = 'auto';
+
+      // ── Custom cursor ─────────────────────────────────
+      const curEl    = document.getElementById('cur');
+      const curShape = document.getElementById('cur-shape');
+      curEl.style.display = 'block';
+
+      // Initialise spring at click position
+      let mx = clickX, my = clickY;
+      let cx = clickX, cy = clickY;
+      let activeIdx = -1;
+
+      function setCursor(idx) {
+        if (idx === activeIdx) return;
+        activeIdx = idx;
+        curShape.innerHTML = CURSOR_HTML[idx] ?? '';
+      }
+      setCursor(0);
+
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX;
+        my = e.clientY;
+        // Detect which section the pointer is over
+        const el = document.elementFromPoint(mx, my);
+        if (!el) return;
+        const sec = el.closest('section');
+        if (!sec) return;
+        const idx = parseInt(sec.dataset.s, 10);
+        if (!isNaN(idx)) setCursor(idx);
+      });
+
+      // Spring-physics follow loop
+      (function cursorTick() {
+        cx += (mx - cx) * 0.12;
+        cy += (my - cy) * 0.12;
+        curEl.style.transform = `translate(${cx}px,${cy}px)`;
+        requestAnimationFrame(cursorTick);
+      })();
+    }
+
+    /* ─────────────────────────────────────────────────────
+       MAIN ANIMATION LOOP
+    ───────────────────────────────────────────────────── */
+    function loop(now) {
+      if (t0 === null) t0 = now;
+
+      // Handle click-triggered ripple (set from event listener)
+      if (pendingRipple) {
+        pendingRipple = false;
+        phase   = P.RIPPLE;
+        t0      = now;
+        ripples = [];
+      }
+
+      const W = canvas.width, H = canvas.height;
+
+      // Black base every frame
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, H);
+
+      if (phase === P.DONE) return;
+
+      switch (phase) {
+        case P.DRIP:       drawDrip(now);       break;
+        case P.IMPACT:     drawImpact(now);     break;
+        case P.SHRINK:     drawShrink(now);     break;
+        case P.BREATHE:    drawBreathe(now);    break;
+        case P.FILL:       drawFill(now);       break;
+        case P.TEXT:       drawText(now);       break;
+        case P.WAIT_CLICK: drawWaitClick(now);  break;
+        case P.RIPPLE:     drawRipple(now);     break;
+      }
+
+      // Advance phase when timer expires (WAIT_CLICK never auto-advances)
+      if (phase !== P.WAIT_CLICK && phaseT(now) >= 1) {
+        if (phase === P.RIPPLE) {
+          revealSite();
+          phase = P.DONE;
+          return; // stop rAF — cursor has its own loop
+        }
+        phase++;
+        t0      = now;
+        ripples = [];
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
